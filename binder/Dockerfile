@@ -111,16 +111,28 @@ RUN mkdir -p ${HOME}/.rviz2 && \
     cp ${REPO_DIR}/config/kitchen_fridge.rviz ${HOME}/.rviz2/default.rviz && \
     chown -R ${NB_USER}:users ${HOME}/.rviz2
 
-# Point the Web IDE's Python extension at the interpreter CRAM is installed in.
-RUN mkdir -p ${HOME}/.vscode && \
-    cp ${REPO_DIR}/config/vscode-settings.json ${HOME}/.vscode/settings.json && \
-    chown -R ${NB_USER}:users ${HOME}/.vscode
+# Web IDE setup, in the CRAM checkout because that is the folder VSCode opens:
+# the conda interpreter CRAM is installed in, and a launch configuration for the
+# demo. A launch configuration does not inherit the shell's environment the way the
+# integrated terminal does, so the ROS 2 environment is dumped to an env file the
+# configurations point at -- rclpy needs PYTHONPATH and LD_LIBRARY_PATH from it, and
+# semantic_digital_twin resolves package:// through ament_index_python, which reads
+# AMENT_PREFIX_PATH. CRAM's own .gitignore covers .vscode/, so this leaves its git
+# status clean.
+RUN /bin/bash -c 'mkdir -p ${CRAM_DIR}/.vscode && \
+    cp ${REPO_DIR}/config/vscode-settings.json ${CRAM_DIR}/.vscode/settings.json && \
+    cp ${REPO_DIR}/config/vscode-launch.json ${CRAM_DIR}/.vscode/launch.json && \
+    source /opt/ros/jazzy/setup.bash && \
+    source ${OVERLAY_WS}/install/setup.bash && \
+    env | grep -E "^(AMENT_PREFIX_PATH|CMAKE_PREFIX_PATH|COLCON_PREFIX_PATH|LD_LIBRARY_PATH|PYTHONPATH|RMW_IMPLEMENTATION|ROS_[A-Z_]+)=" \
+      > ${CRAM_DIR}/.vscode/ros.env && \
+    chown -R ${NB_USER}:users ${CRAM_DIR}/.vscode'
 
 # Set JupyterLab default directory
 WORKDIR ${HOME}
 
-# Set VSCODE default directory
-ENV CODE_WORKING_DIRECTORY=${HOME}
+# Set VSCODE default directory: the tutorial content lives in the CRAM checkout
+ENV CODE_WORKING_DIRECTORY=${CRAM_DIR}
 
 # The entrypoint of the docker image
 COPY binder/entrypoint.sh /entrypoint.sh

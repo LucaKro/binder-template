@@ -16,13 +16,18 @@ without installing anything. Click the badge above to enter it.
 | Path | Contents |
 | --- | --- |
 | `~/cognitive_robot_abstract_machine` | The CRAM monorepo, checked out on the tutorial branch and installed editable. **The tutorial notebooks live here.** |
-| `~/repo` | This repository — RViz configs and the lab's own configuration. |
+| `~/repo` | This repository — RViz config, VSCode config and `scripts/run_demo.sh`. |
 | `~/ros2_ws` | ROS 2 overlay workspace, sourced automatically. |
 
 CRAM is installed into the lab's conda interpreter, `/opt/conda/bin/python` — what
 `python` resolves to in a terminal, what the notebook kernel runs, and what the Web IDE is
 configured to use. It sees ROS 2 as well, so notebooks can import `coraplex`, `giskardpy`
 and `semantic_digital_twin` alongside `rclpy` without selecting a virtualenv.
+
+The Web IDE opens on the CRAM checkout and is preconfigured there: the interpreter above,
+a **Kitchen fridge demo** launch configuration, and a `.vscode/ros.env` holding the ROS 2
+environment (launch configurations do not inherit the shell's, unlike the integrated
+terminal). Nothing needs to be selected by hand.
 
 Do not run the tutorial with `/bin/python3`. That is Ubuntu's system Python: it has ROS 2
 but not CRAM, and greets you with `ModuleNotFoundError: No module named 'coraplex'`.
@@ -48,7 +53,8 @@ world's TF tree; the fixed frame is `iai_oven_area/world`, the root body of the 
 the view gets saved over, reload the shipped one with
 `ros2 run rviz2 rviz2 -d ~/repo/config/kitchen_fridge.rviz`.
 
-Run the plan:
+Run the plan, either from the Web IDE — *Run and Debug* → **Kitchen fridge demo**, or F5
+with the demo file open — or from a terminal:
 
 ```bash
 ~/repo/scripts/run_demo.sh
@@ -57,6 +63,8 @@ Run the plan:
 The script sources the ROS 2 overlay and runs the demo with the right interpreter. The
 equivalent by hand is
 `python ~/cognitive_robot_abstract_machine/coraplex/demos/coraplex_kitchen_fridge_demo/demo.py`.
+The second launch configuration, **Python: current file**, runs whatever file is open the
+same way — useful for the tutorial's own scripts.
 
 The demo asserts where the milk ended up and that the fridge door is shut again, so it
 exits non-zero if the plan did not achieve its goal. Documentation on CRAM is here:
@@ -72,6 +80,11 @@ the Web IDE, check the interpreter in the status bar; it should be the conda one
 JupyterLab inside a running lab breaks the open page. The image removes the source
 extension that used to trigger this dialog and disables the builder, so it should not
 appear at all.
+
+**The launch configuration does not appear, or errors on the `debugpy` type** — the Web
+IDE's Python debugger extension is older than the configuration expects. Change
+`"type": "debugpy"` to `"type": "python"` in
+[`config/vscode-launch.json`](config/vscode-launch.json) and rebuild.
 
 **`ChunkLoadError: Loading chunk … failed`** — reload the page. This happens when
 JupyterLab's static bundle is rebuilt underneath an open tab, which invalidates the chunk

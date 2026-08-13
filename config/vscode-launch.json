@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Kitchen fridge demo",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/coraplex/demos/coraplex_kitchen_fridge_demo/demo.py",
+      "console": "integratedTerminal",
+      "python": "/opt/conda/bin/python",
+      "envFile": "${workspaceFolder}/.vscode/ros.env",
+      "justMyCode": false
+    },
+    {
+      "name": "Python: current file",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "python": "/opt/conda/bin/python",
+      "envFile": "${workspaceFolder}/.vscode/ros.env",
+      "justMyCode": false
+    }
+  ]
+}

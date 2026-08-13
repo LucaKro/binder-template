@@ -1,3 +1,6 @@
 ipywidgets
 sidecar
 matplotlib
+jupytext
+jupyterquiz
+nbformat

@@ -1,56 +1,86 @@
-# binder-template
+# IJCAI Planning Tutorial — Virtual Research Lab
 
-[![Binder](https://binder.intel4coro.de/badge_logo.svg)](https://binder.intel4coro.de/v2/gh/maltehue/binder-template/HEAD)
+[![Binder](https://binder.intel4coro.de/badge_logo.svg)](https://binder.intel4coro.de/v2/gh/LucaKro/binder-template/ijcai_chapter04)
 
-This repo configures a Virtual Research Lab (VRL) of the Virtual Research Building (VRB - https://vrb.ease-crc.org/) developed by the AICOR Intitute for Artifical Intelligence (https://ai.uni-bremen.de/).
-It contains a ros2 controllable Mujoco simulation of the TiaGo Robot.
+This branch configures the Virtual Research Lab (VRL) for the IJCAI planning tutorial. A
+VRL is part of the Virtual Research Building (VRB — https://vrb.ease-crc.org/) developed
+by the AICOR Institute for Artificial Intelligence (https://ai.uni-bremen.de/).
 
-The minimal capabilities of the VRL can be seen in this Video. The VRL can be entered by clicking the button above. 
-The video shows the entry point of the VRL and how to enter the Virtual Desktop and the Web IDE (VSCode). The commands to replicate the demo shown in the video can befound below.
+The lab ships the CRAM cognitive architecture
+(https://github.com/cram2/cognitive_robot_abstract_machine) together with the ROS 2
+packages its simulated plans need, so the tutorial can be worked through in the browser
+without installing anything. Click the badge above to enter it.
 
+## What is in the lab
 
+| Path | Contents |
+| --- | --- |
+| `~/cognitive_robot_abstract_machine` | The CRAM monorepo, checked out on the tutorial branch and installed editable. **The tutorial notebooks live here.** |
+| `~/repo` | This repository — RViz configs and the lab's own configuration. |
+| `~/ros2_ws` | ROS 2 overlay workspace, sourced automatically. |
 
-https://github.com/user-attachments/assets/387addb1-3f52-485e-909a-83673e57c238
+CRAM is installed into the system interpreter, the same one `rclpy` comes from, so
+notebooks can import `coraplex`, `giskardpy` and `semantic_digital_twin` alongside ROS 2
+without selecting a virtualenv.
 
+## Running the example
 
+The tutorial's reference plan is a PR2 that opens a fridge, takes out a milk, closes the
+fridge and places the milk on the kitchen island. It runs fully simulated — CRAM's motion
+stack (giskardpy) runs in-process, so there is no simulator or motion server to start.
 
-## Running the Example
-Make sure to open a Virtual Desktop in the VRL before running the following.
+Open a Virtual Desktop in the VRL first, then:
 
-The commands to run the example from the video are:
+Start RViz to watch the world:
 
-bash to start tiago multiverse server and ros control
 ```bash
-/home/jovyan/Multiverse/Multiverse-Launch/bin/multiverse_launch /home/repo/multiverse_configs/tiago/tiago_position.muv
-````
-This creates a Multiverse Server (https://multiverseframework.readthedocs.io/en/latest/) that acts as a connector between ros2 processes and the mujoco simulation. The .muv file also configures the ros2 controller manager as a Multiverse client. The file can be edited to load different ros2 controller. We use a custom velocity controller for both arms and the torso. The base is moved by a `/cmd_vel` topic.
-
-bash to start tiago mujoco simulation
-```bash
-/home/jovyan/libs/semantic_digital_twin_demo/mujoco/bin/simulate /home/jovyan/libs/semantic_digital_twin_demo/assets/apartment_with_tiago_dual.xml
+ros2 run rviz2 rviz2 -d ~/repo/config/kitchen_fridge.rviz
 ```
-This starts the mujoco simulations as a Multiverse Client. This is achieved by a plugin configuration at the end of the `apartment_with_tiago_dual.xml` file. The configuration of the .muv file and the plugin in the .xml file allow the ros2 controllers to write into the custom multiverse hardware interface of the mujoco simulation.
 
-bash for launchging giskardpy tiago
-```bash
-ros2 launch giskardpy_ros tiago_velocity.launch.py
-```
-This launches the Giskardpy whole-body motion controller of the CRAM Architecture (https://github.com/cram2/cognitive_robot_abstract_machine). This also runs an Interactive Marker that can be used vie the Rviz2 GUI to dirrect command endeffector positions of the robot.
+The lab visualizes through `semantic_digital_twin`'s `VizMarkerPublisher`, which publishes
+a `MarkerArray` on `/semworld/viz_marker` and the world's TF tree. The config's fixed
+frame is `iai_oven_area/world`, the root body of the kitchen.
 
-bash for running a demo
+Run the plan:
+
 ```bash
-python /home/repo/demo.py
+python ~/cognitive_robot_abstract_machine/coraplex/demos/coraplex_kitchen_fridge_demo/demo.py
 ```
-This execute a minimal CRAM plan for the TiaGo. By opening the file in the Web VSCode application and configuring the correct venv (as shown in the video) you obtain code suggestions to faccilitate writing your own robot plans. Documentation on the CRAM system can be found here (https://cram2.github.io/cognitive_robot_abstract_machine/).
+
+The demo asserts where the milk ended up and that the fridge door is shut again, so it
+exits non-zero if the plan did not achieve its goal. Documentation on CRAM is here:
+https://cram2.github.io/cognitive_robot_abstract_machine/.
+
+## Updating the tutorial content
+
+The notebooks are authored in the CRAM monorepo, on
+[`LucaKro/cognitive_robot_abstract_machine@ijcai_planning_tutorials`](https://github.com/LucaKro/cognitive_robot_abstract_machine/tree/ijcai_planning_tutorials).
+The image pins that branch by commit, so publishing new content takes three steps:
+
+1. Push the notebooks to `ijcai_planning_tutorials`.
+2. Bump `ARG CRAM_COMMIT` in [`binder/Dockerfile`](binder/Dockerfile) to the new SHA.
+3. Push this branch.
+
+Step 3 is what actually rebuilds the lab: BinderHub keys its image cache on *this*
+repository's commit, so a change in CRAM alone is invisible to it.
+
+The CRAM checkout in the image is owned by the notebook user and stays a normal git
+working tree, so it can also be edited live from the Web IDE — useful while writing a
+chapter, but those edits live only in the running lab.
 
 ## Development
-All the software installed in this VRL is listed in binder/Dockerfile.
+
+All the software installed in this VRL is listed in [`binder/Dockerfile`](binder/Dockerfile):
+a minimal ROS 2 overlay (`cram_ros2_packages` for `json_msgs`, `iai_pr2` for the PR2
+description and meshes, `iai_maps` for the kitchen) on top of
+`intel4coro/jupyter-ros2:jazzy-py3.12`, plus CRAM itself.
 
 To build a new VRL from a new repo use this website: https://binder.intel4coro.de/
 
-### Run and build docker image Locally (Under repo directory)
+### Run and build docker image locally (under repo directory)
 
-First edit the docker-compose.yml to have `user: root`. This eases the interaction with the command line when inside the lab.
+First edit the docker-compose.yml to have `user: root`. This eases the interaction with
+the command line when inside the lab.
 
 - Build and run docker image:
 
@@ -58,7 +88,7 @@ First edit the docker-compose.yml to have `user: root`. This eases the interacti
   docker compose -f ./binder/docker-compose.yml up --build
   ```
 
-- Open Web browser and go to http://localhost:8888/
+- Open a web browser and go to http://localhost:8888/
 
 - To stop and remove container:
 

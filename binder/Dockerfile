@@ -3,110 +3,90 @@ FROM intel4coro/jupyter-ros2:jazzy-py3.12
 
 USER root
 #============= Install extra software packages =============#
-# RUN apt update && apt install -y curl
-
 # Install python packages
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 #===========================================================#
+
 # ------------------------------------------------------------
-# Required
+# System dependencies
 # ------------------------------------------------------------
-USER root
 RUN apt update && apt install -y --no-install-recommends \
-    ros-jazzy-ros2-control \
-    ros-jazzy-ros2-controllers \
-    ros-jazzy-hardware-interface \
-    ros-jazzy-controller-manager \
-    ros-jazzy-control-msgs \
-    ros-jazzy-rqt-robot-steering \
-    ros-jazzy-rqt-joint-trajectory-controller \
+    ros-jazzy-rviz2 \
+    ros-jazzy-xacro \
+    ros-jazzy-rclpy-message-converter \
+    ros-jazzy-rosidl-default-generators \
+    python3-colcon-common-extensions \
+    python3-vcstool \
     graphviz graphviz-dev \
-    python3-vcstool && \
+    default-jre \
+    git-lfs && \
     rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
-# Install demo repository and cram code
+# ROS 2 overlay workspace
+#
+# Only the packages the tutorial resolves at runtime:
+#   cram_ros2_packages -> json_msgs, imported by giskardpy.middleware.ros2
+#   iai_pr2            -> iai_pr2_description, the PR2 xacro and its meshes
+#   iai_maps           -> iai_kitchen, referenced by kitchen-small.urdf
+#
+# iai_pr2_bringup, iai_pr2_controller_configuration and iai_pr2_sim are still ROS 1
+# catkin packages with no ament build type, so colcon cannot build them and they
+# are dropped. Only iai_pr2_description is needed anyway.
 # ------------------------------------------------------------
-
-RUN pip install poetry
-RUN set -ex && \
-    poetry config virtualenvs.create false && \
-    mkdir -p ${HOME}/libs && cd ${HOME}/libs && \
-    git clone https://github.com/maltehue/semantic_digital_twin_demo.git && \
-    git clone https://github.com/cram2/cognitive_robot_abstract_machine.git && cd cognitive_robot_abstract_machine && git checkout 5cfbb1a9c17555a51ddb32137ce56dcb5c49eabc && cd ../ && \
-    cd cognitive_robot_abstract_machine && \
-    sed -i '/^[[:space:]]*random_events[[:space:]]*=.*$/d' pyproject.toml && \
-    poetry install
-
-# ------------------------------------------------------------
-# Multiverse installation
-# ------------------------------------------------------------
-
-ENV MV_ROOT=${HOME}/Multiverse
-ENV MULTIVERSE_REPO=https://github.com/Multiverse-Framework/Multiverse
-ENV MULTIVERSE_BRANCH=main
+ENV OVERLAY_WS=${HOME}/ros2_ws
 
 RUN set -ex && \
-    mkdir -p ${MV_ROOT} && \
-    cd ${HOME} && \
-    git clone --recurse-submodules --depth 1 --branch ${MULTIVERSE_BRANCH} ${MULTIVERSE_REPO} ${MV_ROOT} || \
-    (cd ${MV_ROOT} && git submodule update --init --recursive) && \
-    cd ${MV_ROOT} && \
-    if [ -f "./Multiverse-Launch/requirements.txt" ]; then \
-    pip install --no-cache-dir -r ./Multiverse-Launch/requirements.txt; fi && \
-    if [ -f "./Multiverse-Utilities/requirements.txt" ]; then \
-    pip install --no-cache-dir -r ./Multiverse-Utilities/requirements.txt; fi && \
-    if [ -f "./Multiverse-Launch/src/multiverse_connectors/multiverse_simulators_connector/src/mujoco_connector/requirements.txt" ]; then \
-    pip install --no-cache-dir -r ./Multiverse-Launch/src/multiverse_connectors/multiverse_simulators_connector/src/mujoco_connector/requirements.txt; fi && \
-    if [ -d "./Multiverse-Launch/src/multiverse_connectors/multiverse_ros_connector/ros_ws/multiverse_ws2" ]; then \
-    cd ./Multiverse-Launch/src/multiverse_connectors/multiverse_ros_connector/ros_ws/multiverse_ws2 && \
-    /bin/bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install"; \
-    cd ${MV_ROOT}; \
-    fi
-
+    mkdir -p ${OVERLAY_WS}/src && cd ${OVERLAY_WS}/src && \
+    git clone --depth 1 -b main https://github.com/cram2/cram_ros2_packages.git && \
+    git clone --depth 1 -b ros-jazzy-main https://github.com/code-iai/iai_pr2.git && \
+    git clone --depth 1 -b ros-jazzy https://github.com/code-iai/iai_maps.git && \
+    rm -rf iai_pr2/iai_pr2_bringup iai_pr2/iai_pr2_controller_configuration iai_pr2/iai_pr2_sim && \
+    cd ${OVERLAY_WS} && \
+    /bin/bash -lc "source /opt/ros/jazzy/setup.bash && colcon build --merge-install"
 
 # ------------------------------------------------------------
-# ROS2 workspace: giskardpy_ros (clone, deps, build)
+# CRAM
+#
+# The tutorial notebooks live in this checkout, so it is owned by the notebook
+# user and stays writable. Bump CRAM_COMMIT to pull in new tutorial content.
 # ------------------------------------------------------------
-RUN pip install xacro
+ARG CRAM_REPO=https://github.com/LucaKro/cognitive_robot_abstract_machine.git
+ARG CRAM_BRANCH=ijcai_planning_tutorials
+ARG CRAM_COMMIT=5c5e3eee470e2dc94c15601951a6427400536a51
+ENV CRAM_DIR=${HOME}/cognitive_robot_abstract_machine
 
-ARG ROS_DISTRO=jazzy
-ENV ROS_DISTRO=${ROS_DISTRO}
+RUN pip install poetry && \
+    poetry config virtualenvs.create false
 
-# Create workspace, fetch sources, install Python reqs and system deps, then build
+# Installing without a virtualenv puts CRAM into the same interpreter rclpy lives in.
 RUN set -ex && \
-    mkdir -p ${HOME}/giskard_ws/src && cd ${HOME}/giskard_ws/src && \
-    git clone https://github.com/SemRoCo/giskardpy_ros.git -b tiago_velocity_semdt && cd giskardpy_ros && git checkout 4828cc48ab142c3d042f3b93c9921e4d72132f4f && cd ../ &&\
-    git clone https://github.com/code-iai/iai_tiago_description.git -b ros2-main && \
-    pip install -r giskardpy_ros/requirements.txt && \
-    cd ${HOME}/giskard_ws && \
-    vcs import src < src/giskardpy_ros/$ROS_DISTRO.repos && \
-    rosdep update --rosdistro=$ROS_DISTRO && \
-    apt-get update && rosdep install --from-paths ./ -i -y --rosdistro ${ROS_DISTRO} && \
-    /bin/bash -lc "set -ex; source /opt/ros/${ROS_DISTRO}/setup.bash && cd ${HOME}/giskard_ws && colcon build"
+    git clone -b ${CRAM_BRANCH} ${CRAM_REPO} ${CRAM_DIR} && \
+    cd ${CRAM_DIR} && git checkout ${CRAM_COMMIT} && \
+    poetry install && \
+    pip install "setuptools<81" && \
+    git config --global --add safe.directory ${CRAM_DIR} && \
+    chown -R ${NB_USER}:users ${CRAM_DIR}
 
-
-RUN set -ex && \
-    cd ${HOME}/giskard_ws/src && git clone https://github.com/code-iai/iai_hsr.git -b ros2-humble && cd iai_hsr && rm -rf hsr_description hsr_navigation iai_hsr_bringup && \
-    cd ${HOME}/giskard_ws && /bin/bash -lc "set -ex; source /opt/ros/${ROS_DISTRO}/setup.bash && cd ${HOME}/giskard_ws && colcon build --cmake-args -DBUILD_TESTING=OFF"
-# Note: Sourcing the workspace at runtime should be done in the entrypoint or shell:
-#   source ~/giskard_ws/install/setup.bash
-
-RUN pip install "setuptools<81"
+# The entrypoint covers the JupyterLab process tree, .bashrc covers terminals
+# opened in the Web IDE and on the desktop.
+RUN echo "source ${OVERLAY_WS}/install/setup.bash" >> ${HOME}/.bashrc
 
 USER root
 # Copy content to the image
 ENV REPO_DIR=/home/repo
 RUN mkdir -p ${REPO_DIR}
 COPY . ${REPO_DIR}/
-RUN git config --global --add safe.directory ${REPO_DIR}
+RUN git config --global --add safe.directory ${REPO_DIR} && \
+    ln -sfn ${REPO_DIR} ${HOME}/repo && \
+    chown -h ${NB_USER}:users ${HOME}/repo
 
 # Set JupyterLab default directory
-WORKDIR ${REPO_DIR}
+WORKDIR ${HOME}
 
 # Set VSCODE default directory
-ENV CODE_WORKING_DIRECTORY=${REPO_DIR}
+ENV CODE_WORKING_DIRECTORY=${HOME}
 
 # The entrypoint of the docker image
 COPY binder/entrypoint.sh /entrypoint.sh

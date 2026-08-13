@@ -1,7 +1,7 @@
 version: '3'
 services:
-  binder-template:
-    image: binder-template:main
+  ijcai-planning-tutorial:
+    image: ijcai-planning-tutorial:ijcai_chapter04
     build:
       context: ../
       dockerfile: ./binder/Dockerfile

@@ -2,10 +2,15 @@
 FROM intel4coro/jupyter-ros2:jazzy-py3.12
 
 USER root
+
+# Set by the jupyter docker-stacks base; restated so the interpreter this image
+# installs into is explicit rather than whatever PATH happens to resolve to.
+ENV CONDA_DIR=${CONDA_DIR:-/opt/conda}
+
 #============= Install extra software packages =============#
 # Install python packages
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+RUN ${CONDA_DIR}/bin/pip install -r /tmp/requirements.txt
 #===========================================================#
 
 # ------------------------------------------------------------
@@ -57,17 +62,34 @@ ARG CRAM_BRANCH=ijcai_planning_tutorials
 ARG CRAM_COMMIT=5c5e3eee470e2dc94c15601951a6427400536a51
 ENV CRAM_DIR=${HOME}/cognitive_robot_abstract_machine
 
-RUN pip install poetry && \
-    poetry config virtualenvs.create false
+RUN ${CONDA_DIR}/bin/pip install poetry && \
+    ${CONDA_DIR}/bin/poetry config virtualenvs.create false
 
-# Installing without a virtualenv puts CRAM into the same interpreter rclpy lives in.
+# Installing without a virtualenv puts CRAM into the conda interpreter, which is the
+# one JupyterLab's kernel and the desktop's `python` use, and which sees ROS 2 through
+# PYTHONPATH once /opt/ros/jazzy is sourced. /bin/python3 is a different interpreter
+# and does not get CRAM.
 RUN set -ex && \
     git clone -b ${CRAM_BRANCH} ${CRAM_REPO} ${CRAM_DIR} && \
     cd ${CRAM_DIR} && git checkout ${CRAM_COMMIT} && \
-    poetry install && \
-    pip install "setuptools<81" && \
+    ${CONDA_DIR}/bin/poetry install && \
+    ${CONDA_DIR}/bin/pip install "setuptools<81" && \
     git config --global --add safe.directory ${CRAM_DIR} && \
     chown -R ${NB_USER}:users ${CRAM_DIR}
+
+# Fail the build here rather than in a learner's face if CRAM or the overlay ended up
+# somewhere the notebooks cannot import from.
+RUN /bin/bash -c "source /opt/ros/jazzy/setup.bash && \
+    source ${OVERLAY_WS}/install/setup.bash && \
+    ${CONDA_DIR}/bin/python -c 'import rclpy, json_msgs.action, coraplex, giskardpy, semantic_digital_twin; print(\"imports ok\")'"
+
+# dash, which CRAM pulls in for plotting, ships a *source* labextension. JupyterLab
+# offers to rebuild itself for those on every start, and rebuilding rewrites the static
+# bundle under the open page, so every lazily loaded chunk (terminals among them) 404s
+# afterwards. Drop the source extension and the builder plugin; the prebuilt extensions
+# in share/jupyter/labextensions (plotly, open3d, sidecar, widgets) are unaffected.
+RUN rm -f ${CONDA_DIR}/share/jupyter/lab/extensions/*.tgz && \
+    ${CONDA_DIR}/bin/jupyter labextension disable "@jupyterlab/apputils-extension:builder" --level=sys_prefix
 
 # The entrypoint covers the JupyterLab process tree, .bashrc covers terminals
 # opened in the Web IDE and on the desktop.
@@ -81,6 +103,18 @@ COPY . ${REPO_DIR}/
 RUN git config --global --add safe.directory ${REPO_DIR} && \
     ln -sfn ${REPO_DIR} ${HOME}/repo && \
     chown -h ${NB_USER}:users ${HOME}/repo
+
+# rviz2 started without -d loads ~/.rviz2/default.rviz, so the tutorial's config is
+# what a bare `ros2 run rviz2 rviz2` comes up with. The copy stays writable; the one in
+# the repo remains the source of truth.
+RUN mkdir -p ${HOME}/.rviz2 && \
+    cp ${REPO_DIR}/config/kitchen_fridge.rviz ${HOME}/.rviz2/default.rviz && \
+    chown -R ${NB_USER}:users ${HOME}/.rviz2
+
+# Point the Web IDE's Python extension at the interpreter CRAM is installed in.
+RUN mkdir -p ${HOME}/.vscode && \
+    cp ${REPO_DIR}/config/vscode-settings.json ${HOME}/.vscode/settings.json && \
+    chown -R ${NB_USER}:users ${HOME}/.vscode
 
 # Set JupyterLab default directory
 WORKDIR ${HOME}

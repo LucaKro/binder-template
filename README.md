@@ -19,9 +19,13 @@ without installing anything. Click the badge above to enter it.
 | `~/repo` | This repository — RViz configs and the lab's own configuration. |
 | `~/ros2_ws` | ROS 2 overlay workspace, sourced automatically. |
 
-CRAM is installed into the system interpreter, the same one `rclpy` comes from, so
-notebooks can import `coraplex`, `giskardpy` and `semantic_digital_twin` alongside ROS 2
-without selecting a virtualenv.
+CRAM is installed into the lab's conda interpreter, `/opt/conda/bin/python` — what
+`python` resolves to in a terminal, what the notebook kernel runs, and what the Web IDE is
+configured to use. It sees ROS 2 as well, so notebooks can import `coraplex`, `giskardpy`
+and `semantic_digital_twin` alongside `rclpy` without selecting a virtualenv.
+
+Do not run the tutorial with `/bin/python3`. That is Ubuntu's system Python: it has ROS 2
+but not CRAM, and greets you with `ModuleNotFoundError: No module named 'coraplex'`.
 
 ## Running the example
 
@@ -34,22 +38,44 @@ Open a Virtual Desktop in the VRL first, then:
 Start RViz to watch the world:
 
 ```bash
-ros2 run rviz2 rviz2 -d ~/repo/config/kitchen_fridge.rviz
+ros2 run rviz2 rviz2
 ```
 
-The lab visualizes through `semantic_digital_twin`'s `VizMarkerPublisher`, which publishes
-a `MarkerArray` on `/semworld/viz_marker` and the world's TF tree. The config's fixed
-frame is `iai_oven_area/world`, the root body of the kitchen.
+It comes up with the tutorial's config, which is installed as RViz's default
+(`~/.rviz2/default.rviz`). The lab visualizes through `semantic_digital_twin`'s
+`VizMarkerPublisher`, which publishes a `MarkerArray` on `/semworld/viz_marker` and the
+world's TF tree; the fixed frame is `iai_oven_area/world`, the root body of the kitchen. If
+the view gets saved over, reload the shipped one with
+`ros2 run rviz2 rviz2 -d ~/repo/config/kitchen_fridge.rviz`.
 
 Run the plan:
 
 ```bash
-python ~/cognitive_robot_abstract_machine/coraplex/demos/coraplex_kitchen_fridge_demo/demo.py
+~/repo/scripts/run_demo.sh
 ```
+
+The script sources the ROS 2 overlay and runs the demo with the right interpreter. The
+equivalent by hand is
+`python ~/cognitive_robot_abstract_machine/coraplex/demos/coraplex_kitchen_fridge_demo/demo.py`.
 
 The demo asserts where the milk ended up and that the fridge door is shut again, so it
 exits non-zero if the plan did not achieve its goal. Documentation on CRAM is here:
 https://cram2.github.io/cognitive_robot_abstract_machine/.
+
+## Troubleshooting
+
+**`ModuleNotFoundError: No module named 'coraplex'`** — the file is being run with
+`/bin/python3`. Use `python` (`/opt/conda/bin/python`) or `~/repo/scripts/run_demo.sh`. In
+the Web IDE, check the interpreter in the status bar; it should be the conda one.
+
+**A "Build Recommended" dialog appears** — click Cancel, never Build. Rebuilding
+JupyterLab inside a running lab breaks the open page. The image removes the source
+extension that used to trigger this dialog and disables the builder, so it should not
+appear at all.
+
+**`ChunkLoadError: Loading chunk … failed`** — reload the page. This happens when
+JupyterLab's static bundle is rebuilt underneath an open tab, which invalidates the chunk
+hashes the tab is still asking for.
 
 ## Updating the tutorial content
 

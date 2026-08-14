@@ -59,7 +59,7 @@ RUN set -ex && \
 # ------------------------------------------------------------
 ARG CRAM_REPO=https://github.com/LucaKro/cognitive_robot_abstract_machine.git
 ARG CRAM_BRANCH=ijcai_planning_tutorials
-ARG CRAM_COMMIT=4488bb67d1abf11c4d56d2e315eaca86309ce4bb
+ARG CRAM_COMMIT=8ebb62459266f21f19b54f17be3a2786e804fcd1
 ENV CRAM_DIR=${HOME}/cognitive_robot_abstract_machine
 
 RUN ${CONDA_DIR}/bin/pip install poetry && \

@@ -97,8 +97,16 @@ The notebooks are authored in the CRAM monorepo, on
 The image pins that branch by commit, so publishing new content takes three steps:
 
 1. Push the notebooks to `ijcai_planning_tutorials`.
-2. Bump `ARG CRAM_COMMIT` in [`binder/Dockerfile`](binder/Dockerfile) to the new SHA.
-3. Push this branch.
+2. Repin this repository to the new tip:
+
+   ```bash
+   scripts/update_cram_pin.sh
+   ```
+
+   It reads the repository and branch out of `binder/Dockerfile`, resolves the branch tip
+   with `git ls-remote`, rewrites `ARG CRAM_COMMIT` and prints a compare link for what
+   moved. `--check` reports without touching anything.
+3. `git commit -am '…' && git push`.
 
 Step 3 is what actually rebuilds the lab: BinderHub keys its image cache on *this*
 repository's commit, so a change in CRAM alone is invisible to it.

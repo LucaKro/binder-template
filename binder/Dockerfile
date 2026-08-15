@@ -128,10 +128,45 @@ RUN /bin/bash -c 'mkdir -p ${CRAM_DIR}/.vscode && \
       > ${CRAM_DIR}/.vscode/ros.env && \
     chown -R ${NB_USER}:users ${CRAM_DIR}/.vscode'
 
+# Everything below writes into the notebook user's home, so it runs as that user rather
+# than as root with a chown after it.
+USER ${NB_USER}
+
+# ------------------------------------------------------------
+# The tutorial notebooks
+#
+# The exercises are authored as MyST markdown with the example solutions in tagged cells.
+# CRAM's own script strips those cells out and writes what a learner works in, so the
+# notebooks are generated here rather than committed: converted_exercises/ is gitignored
+# in CRAM and does not exist until this has run.
+#
+# Conversion is jupytext plus nbconvert's TagRemovePreprocessor. Nothing is executed, so
+# this needs neither ROS 2 nor a display.
+#
+# The script leaves them six directories down, which is not where a learner finds a
+# notebook, so they are moved to the root of the checkout -- the folder the Web IDE opens.
+# They resolve what they need through the installed packages (`files("coraplex")`), not
+# through the working directory, so where they sit does not matter to them. Their names
+# start with a digit, and `explorer.sortOrder` is `mixed` in .vscode/settings.json, so
+# they sort above the source directories in the Explorer. Being generated, they are
+# excluded from the checkout's git status rather than left in it as untracked files.
+# ------------------------------------------------------------
+RUN set -ex && \
+    CONVERTED=${CRAM_DIR}/coraplex/self_assessment/exercises/converted_exercises && \
+    PATH=${CONDA_DIR}/bin:${PATH} \
+      /bin/bash ${CRAM_DIR}/coraplex/scripts/convert_exercises_for_self_assessment.sh && \
+    mv ${CONVERTED}/*.ipynb ${CRAM_DIR}/ && \
+    rmdir ${CONVERTED} && \
+    ${CONDA_DIR}/bin/python ${REPO_DIR}/scripts/pin_notebook_kernel.py ${CRAM_DIR} && \
+    echo "/*.ipynb" >> ${CRAM_DIR}/.git/info/exclude && \
+    ls -l ${CRAM_DIR}/*.ipynb
+
+USER root
+
 # Set JupyterLab default directory
 WORKDIR ${HOME}
 
-# Set VSCODE default directory: the tutorial content lives in the CRAM checkout
+# Set VSCODE default directory: the tutorial notebooks are at the root of the CRAM checkout
 ENV CODE_WORKING_DIRECTORY=${CRAM_DIR}
 
 # The entrypoint of the docker image

@@ -15,7 +15,7 @@ without installing anything. Click the badge above to enter it.
 
 | Path | Contents |
 | --- | --- |
-| `~/cognitive_robot_abstract_machine` | The CRAM monorepo, checked out on the tutorial branch and installed editable. **The tutorial notebooks live here.** |
+| `~/cognitive_robot_abstract_machine` | The CRAM monorepo, checked out on the tutorial branch and installed editable. **The tutorial notebooks sit at the root of it**, generated when the image is built. |
 | `~/repo` | This repository — RViz config, VSCode config and `scripts/run_demo.sh`. |
 | `~/ros2_ws` | ROS 2 overlay workspace, sourced automatically. |
 
@@ -28,6 +28,33 @@ The Web IDE opens on the CRAM checkout and is preconfigured there: the interpret
 a **Kitchen fridge demo** launch configuration, and a `.vscode/ros.env` holding the ROS 2
 environment (launch configurations do not inherit the shell's, unlike the integrated
 terminal). Nothing needs to be selected by hand.
+
+## The tutorial notebooks
+
+The exercises are authored in CRAM as MyST markdown, with the example solutions in cells
+tagged `example-solution`. The image runs CRAM's own
+`coraplex/scripts/convert_exercises_for_self_assessment.sh` at build time, which strips
+those cells and leaves the task descriptions, the stubs and the checks that grade them.
+The notebooks are generated rather than committed — the script writes them to a directory
+that is gitignored in CRAM and does not exist in the checkout.
+
+Opening the Web IDE puts them in front of the learner, with the kernel already chosen, so
+an exercise cell can just be run. Two things make that happen:
+
+- **Where they are.** The script leaves them six directories down, so the build moves them
+  to the root of the checkout, which is the folder the Web IDE opens. Their names start
+  with a digit and `explorer.sortOrder` is `mixed`, so they sort above CRAM's own
+  directories and are the first thing in the Explorer. Nothing opens by itself — one click
+  does. They resolve what they need through the installed packages rather than through the
+  working directory, so the move costs them nothing, and `.git/info/exclude` keeps them out
+  of the checkout's git status.
+- **The kernel.** VSCode picks a kernel for a notebook it has not seen before by matching
+  the notebook's `kernelspec` metadata against the installed kernels, and jupytext writes
+  whatever the exercise source declares. After conversion,
+  [`scripts/pin_notebook_kernel.py`](scripts/pin_notebook_kernel.py) rewrites that metadata
+  to the kernel this image actually has — the conda one, which is where CRAM is installed —
+  so the match is exact. The kernel inherits the ROS 2 environment from the JupyterLab
+  process that starts the Web IDE.
 
 Do not run the tutorial with `/bin/python3`. That is Ubuntu's system Python: it has ROS 2
 but not CRAM, and greets you with `ModuleNotFoundError: No module named 'coraplex'`.
@@ -86,17 +113,26 @@ IDE's Python debugger extension is older than the configuration expects. Change
 `"type": "debugpy"` to `"type": "python"` in
 [`config/vscode-launch.json`](config/vscode-launch.json) and rebuild.
 
+**No notebooks at the top of the Explorer, or a notebook asks to "Select Kernel"** — the
+conversion is the first suspect for both; check its output, and that of
+`scripts/pin_notebook_kernel.py`, in the build log. Meanwhile the notebooks are wherever
+the conversion left them, under `coraplex/self_assessment/exercises/`, and the kernel to
+pick by hand is the conda one (at `/opt/conda/bin/python`).
+
 **`ChunkLoadError: Loading chunk … failed`** — reload the page. This happens when
 JupyterLab's static bundle is rebuilt underneath an open tab, which invalidates the chunk
 hashes the tab is still asking for.
 
 ## Updating the tutorial content
 
-The notebooks are authored in the CRAM monorepo, on
-[`LucaKro/cognitive_robot_abstract_machine@ijcai_planning_tutorials`](https://github.com/LucaKro/cognitive_robot_abstract_machine/tree/ijcai_planning_tutorials).
-The image pins that branch by commit, so publishing new content takes three steps:
+The exercise sources live in the CRAM monorepo, on
+[`LucaKro/cognitive_robot_abstract_machine@ijcai_planning_tutorials`](https://github.com/LucaKro/cognitive_robot_abstract_machine/tree/ijcai_planning_tutorials),
+under `coraplex/self_assessment/exercises/`. The image pins that branch by commit, so
+publishing new content takes three steps:
 
-1. Push the notebooks to `ijcai_planning_tutorials`.
+1. Push the exercise markdown to `ijcai_planning_tutorials`. Check it converts first:
+   `coraplex/scripts/convert_exercises_for_self_assessment.sh`, which is the same script
+   the image build runs.
 2. Repin this repository to the new tip:
 
    ```bash

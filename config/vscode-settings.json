@@ -1,5 +1,7 @@
 {
   "python.defaultInterpreterPath": "/opt/conda/bin/python",
   "python.terminal.activateEnvironment": false,
-  "python.envFile": "${workspaceFolder}/.vscode/ros.env"
+  "python.envFile": "${workspaceFolder}/.vscode/ros.env",
+  "explorer.sortOrder": "mixed",
+  "workbench.startupEditor": "none"
 }

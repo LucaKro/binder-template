@@ -1,15 +1,56 @@
-# IJCAI Planning Tutorial — Virtual Research Lab
+# Chapter 4: Completing the Full Transportation Task
 
 [![Binder](https://binder.intel4coro.de/badge_logo.svg)](https://binder.intel4coro.de/v2/gh/LucaKro/binder-template/ijcai_chapter04)
 
-This branch configures the Virtual Research Lab (VRL) for the IJCAI planning tutorial. A
-VRL is part of the Virtual Research Building (VRB — https://vrb.ease-crc.org/) developed
+This branch configures the Virtual Research Lab (VRL) for **chapter 4** of the
+[AICOR tutorial](https://vrb.ease-crc.org/aicor-tutorial/), held at **IJCAI 2026**. The
+chapter draws the earlier ones together into a single task: a PR2 takes a milk out of a
+closed fridge and puts it down on the kitchen island, written step by step as a plan in
+CRAM's planning framework, coraplex.
+
+Author: **Luca Krohm** ([@LucaKro](https://github.com/LucaKro), krohm@uni-bremen.de)
+
+A VRL is part of the Virtual Research Building (VRB — https://vrb.ease-crc.org/) developed
 by the AICOR Institute for Artificial Intelligence (https://ai.uni-bremen.de/).
 
 The lab ships the CRAM cognitive architecture
 (https://github.com/cram2/cognitive_robot_abstract_machine) together with the ROS 2
 packages its simulated plans need, so the tutorial can be worked through in the browser
 without installing anything. Click the badge above to enter it.
+
+## Working through the tutorial
+
+Everything below happens inside the lab — there is nothing to install and nothing to
+clone.
+
+1. **Open a Virtual Desktop.** The world is watched in RViz, which is a desktop
+   application, so the lab's desktop has to be open.
+
+2. **Start RViz.** Open a terminal on that desktop and run:
+
+   ```bash
+   rviz2
+   ```
+
+   It comes up on the tutorial's config already. It has nothing to show yet: the world
+   appears once the notebook's setup section builds it and starts the marker publisher.
+
+3. **Open the Web IDE (VSCode).** It opens on the CRAM checkout, with the right
+   interpreter and notebook kernel already selected.
+
+4. **Open `0_writing_a_robot_plan.ipynb`** — the tutorial notebook, at the top of the
+   Explorer — and work down it from the top.
+
+Each section states a goal, gives you a cell to write your plan in, and follows it with a
+check that grades what the robot actually did; a check that is not satisfied raises
+`ExerciseVerificationFailed`. The sections build on one another: every one acts on the
+world the one before it left behind, so run them in order, and restart the kernel and run
+from the top if the world ends up somewhere a section does not expect. The robot really
+plans and executes its motions, so a section takes minutes rather than seconds, and a full
+pass costs about as much time as one run of the reference demo below.
+
+If you get stuck, the [worked solutions](https://lucakro.github.io/cognitive_robot_abstract_machine/coraplex/self_assessment/exercises/0_writing_a_robot_plan.html)
+are published for every section.
 
 ## What is in the lab
 
@@ -70,7 +111,7 @@ Open a Virtual Desktop in the VRL first, then:
 Start RViz to watch the world:
 
 ```bash
-ros2 run rviz2 rviz2
+rviz2
 ```
 
 It comes up with the tutorial's config, which is installed as RViz's default
@@ -78,7 +119,7 @@ It comes up with the tutorial's config, which is installed as RViz's default
 `VizMarkerPublisher`, which publishes a `MarkerArray` on `/semworld/viz_marker` and the
 world's TF tree; the fixed frame is `iai_oven_area/world`, the root body of the kitchen. If
 the view gets saved over, reload the shipped one with
-`ros2 run rviz2 rviz2 -d ~/repo/config/kitchen_fridge.rviz`.
+`rviz2 -d ~/repo/config/kitchen_fridge.rviz`.
 
 Run the plan, either from the Web IDE — *Run and Debug* → **Kitchen fridge demo**, or F5
 with the demo file open — or from a terminal:

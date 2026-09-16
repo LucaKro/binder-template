@@ -38,7 +38,7 @@ All paths are relative to the directory that contains this `SKILL.md`:
 | `reference/base-images.md` | Available base images and which ROS versions they support |
 | `reference/troubleshooting.md` | Build and runtime problems with fixes; the checklist to run before pushing |
 
-The **template repository itself** (the repository that contains this skill, two directories
+The **template repository itself** (the repository that contains this skill, three directories
 above this file) is the "CRAM preinstalled" flavor. If you are not running inside a clone
 of it, it is at `https://github.com/aicor-vrb/binder-template`. Ask before cloning it.
 
@@ -153,7 +153,7 @@ Summarize all decisions in a table and get one final confirmation.
 **CRAM preinstalled flavor**
 
 1. Copy the entire template repository (all files except `.git`, `.idea`, and this
-   `skills/` directory unless the user wants to keep the skill) into the lab directory.
+   `.claude/skills/` directory unless the user wants to keep the skill) into the lab directory.
 2. Keep the existing Dockerfile blocks. Insert the project clone before the
    `COPY . ${REPO_DIR}/` line and the project build steps after it, using the same snippets.
 3. Point out the demo-specific parts they may want to change or remove later:

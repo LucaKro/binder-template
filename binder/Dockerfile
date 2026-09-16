@@ -1,108 +1,93 @@
-# Dockerfile of the base image: https://github.com/IntEL4CoRo/jupyter-ros2/blob/main/Dockerfile
+# Dockerfile for the VRB lab "aicon-vrb-lab"
+#
+# Base image (ROS 2 + JupyterLab + VSCode + VNC desktop):
+#   https://github.com/IntEL4CoRo/jupyter-ros2
+# The jazzy-py3.12 tag is used for its Python 3.12 (matches AICON) and the VNC
+# desktop that shows the MuJoCo viewer. ROS itself is not used by this lab.
+#
+# Build-cache rule: steps that are slow and rarely change go at the TOP,
+# steps that use this repository's files go at the BOTTOM (after COPY).
 FROM intel4coro/jupyter-ros2:jazzy-py3.12
 
 USER root
-#============= Install extra software packages =============#
-# RUN apt update && apt install -y curl
-RUN apt update && apt install -y --no-install-recommends     graphviz     libgraphviz-dev     pkg-config     python3-dev     build-essential &&     rm -rf /var/lib/apt/lists/*
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install python packages
-COPY requirements.txt /tmp/requirements.txt
-RUN python3 -m pip install -r /tmp/requirements.txt
-#===========================================================#
-# ------------------------------------------------------------
-# Required
-# ------------------------------------------------------------
-USER root
+#================= SYSTEM PACKAGES (apt) =====================================#
+# libosmesa6 / libgl1 / libegl1 / libglfw3: OpenGL for MuJoCo rendering
+# nodejs / npm: build the desktop panel JupyterLab extension
 RUN apt update && apt install -y --no-install-recommends \
-    ros-jazzy-ros2-control \
-    ros-jazzy-ros2-controllers \
-    ros-jazzy-hardware-interface \
-    ros-jazzy-controller-manager \
-    ros-jazzy-control-msgs \
-    ros-jazzy-xacro \
-    ros-jazzy-rqt-joint-trajectory-controller \
-    python3-vcstool \
-    nodejs \
-    npm \
-    wmctrl && \
-    rm -rf /var/lib/apt/lists/*
+        libosmesa6 \
+        libgl1 \
+        libegl1 \
+        libglfw3 \
+        nodejs \
+        npm \
+    && rm -rf /var/lib/apt/lists/*
 
-# ------------------------------------------------------------
-# Install demo repository and cram code
-# ------------------------------------------------------------
+# Binder has no GPU: render MuJoCo in software. robosuite would otherwise force EGL.
+ENV MUJOCO_GL=osmesa
+ENV PYOPENGL_PLATFORM=osmesa
 
-RUN python3 -m pip install poetry
-RUN set -ex && \
-    poetry config virtualenvs.create false && \
-    mkdir -p ${HOME}/libs && cd ${HOME}/libs && \
-    git clone --branch vrb-action-cores --single-branch https://github.com/sunava/cognitive_robot_abstract_machine.git && \
-    cd cognitive_robot_abstract_machine && \
-    git pull && \
-    git clone https://github.com/sunava/pycram_object_gap_demo.git pycram/resources/pycram_object_gap_demo && \
-    sed -i '/^[[:space:]]*random_events[[:space:]]*=.*$/d' pyproject.toml && \
-    poetry install && \
-    mkdir -p /workspace/ros/src && \
-    cd /workspace/ros/src && \
-    git clone -b ros-jazzy --single-branch https://github.com/code-iai/iai_maps.git && \
-    git clone -b ros-jazzy-main --single-branch https://github.com/code-iai/iai_pr2.git && \
-    git clone -b ros-jazzy --single-branch https://github.com/code-iai/iai_robots.git && \
-    git clone -b ros2-jazzy --single-branch https://github.com/code-iai/iai_stretch.git && \
-    git clone -b ros2-jazzy --single-branch https://github.com/code-iai/hsr_description.git && \
-    git clone -b ros2-main --single-branch https://github.com/code-iai/iai_tiago_description.git && \
-    git clone -b ros2-master --single-branch https://github.com/realsenseai/realsense-ros.git && \
-    git clone -b jazzy --single-branch https://github.com/UniversalRobots/Universal_Robots_ROS2_Description.git && \
-    git clone https://github.com/maltehue/ros2_robotiq_gripper.git && \
-    rm -rf ros2_robotiq_gripper/robotiq_driver \
-           ros2_robotiq_gripper/robotiq_drivers \
-           ros2_robotiq_gripper/robotiq_controllers \
-           ros2_robotiq_gripper/robotiq_hardware_tests  \
-           realsense-ros/realsense2_ros_mqtt_bridge  \
-           realsense-ros/realsense2_rgbd_plugin  \
-           realsense-ros/realsense2_camera_msgs \
-           realsense-ros/realsense2_camera && \
-    find /workspace/ros/src -type f -name package.xml -path '*/robotiq_driver/package.xml' -execdir touch COLCON_IGNORE \; && \
-    git clone https://github.com/sunava/isr_testbed.git && \
-    git clone https://github.com/ipa320/cob_simulation.git && \
-    cd /workspace/ros && \
-    . /opt/ros/${ROS_DISTRO}/setup.sh && \
-    colcon build --symlink-install \
-      --packages-skip cob_gazebo_tools cob_gazebo_objects cob_gazebo_worlds cob_gazebo cob_bringup_sim cob_simulation && \
-    echo "source /workspace/ros/install/setup.bash" >> /root/.bashrc
+#================= EXTERNAL REPOSITORIES ======================================#
+# Pinned commits for a reproducible lab. HTTPS URLs only.
+ENV LIBS_DIR=/home/${NB_USER}/libs
 
-# ------------------------------------------------------------
-# ROS2 workspace: giskardpy_ros (clone, deps, build)
-# ------------------------------------------------------------
-RUN pip install xacro
+# AICON (tu-rbo/aicon, master)
+ARG AICON_COMMIT=6865ef4051dbea090f4872e56a828d8821ec6593
+ENV PROJECT_DIR=${LIBS_DIR}/aicon
+RUN mkdir -p ${PROJECT_DIR} && cd ${PROJECT_DIR} && \
+    git init -q && \
+    git remote add origin https://github.com/tu-rbo/aicon.git && \
+    git fetch -q --depth=1 origin ${AICON_COMMIT} && \
+    git checkout -q FETCH_HEAD
 
-ARG ROS_DISTRO=jazzy
-ENV ROS_DISTRO=${ROS_DISTRO}
+# robosuite-task-zoo (provides the cabinet model used by the drawer demo)
+ARG TASK_ZOO_COMMIT=74eab7f88214c21ca1ae8617c2b2f8d19718a9ed
+RUN mkdir -p ${LIBS_DIR}/robosuite-task-zoo && cd ${LIBS_DIR}/robosuite-task-zoo && \
+    git init -q && \
+    git remote add origin https://github.com/ARISE-Initiative/robosuite-task-zoo.git && \
+    git fetch -q --depth=1 origin ${TASK_ZOO_COMMIT} && \
+    git checkout -q FETCH_HEAD
 
+#================= PYTHON PACKAGES (pip) ======================================#
+# CPU-only PyTorch first, so AICON's torch pin does not pull ~2.5 GB of CUDA libraries.
+RUN python3 -m pip install --no-cache-dir \
+        --index-url https://download.pytorch.org/whl/cpu \
+        torch==2.4.0 torchvision==0.19.0
 
-RUN pip install "setuptools<81"
+# AICON with the dependencies from its pyproject.toml
+RUN python3 -m pip install --no-cache-dir -e ${PROJECT_DIR}
 
-USER root
-# Copy content to the image
+# robosuite, MuJoCo and notebook helpers
+COPY requirements.txt /tmp/requirements.txt
+RUN python3 -m pip install --no-cache-dir -r /tmp/requirements.txt
+
+# setup.py of robosuite-task-zoo requires mujoco-py, which its code never imports
+RUN python3 -m pip install --no-cache-dir --no-deps -e ${LIBS_DIR}/robosuite-task-zoo
+
+#================= DESKTOP PANEL EXTENSION ====================================#
+# Small JupyterLab extension that opens the VNC desktop as a docked tab.
+# Copied on its own so notebook edits do not trigger a rebuild of JupyterLab.
+COPY binder/desktop-widget /opt/desktop-widget
+RUN cd /opt/desktop-widget && \
+    npm install && \
+    npm run build && \
+    jupyter labextension install . --no-build && \
+    jupyter lab build --minimize=False && \
+    npm cache clean --force
+
+#================= COPY THIS REPOSITORY INTO THE IMAGE ========================#
+# Everything below this line re-runs on every push.
 ENV REPO_DIR=/home/repo
 RUN mkdir -p ${REPO_DIR}
 COPY . ${REPO_DIR}/
 RUN git config --global --add safe.directory ${REPO_DIR}
 
-# Set JupyterLab default directory
+# JupyterLab and VSCode start in the repository
 WORKDIR ${REPO_DIR}
-
-# Set VSCODE default directory
 ENV CODE_WORKING_DIRECTORY=${REPO_DIR}
 
-# Copy RViz config
-COPY default.rviz /home/jovyan/.rviz2/default.rviz
-RUN mkdir -p /home/jovyan/.ipython/profile_default/startup /root/.ipython/profile_default/startup
-RUN cd ${REPO_DIR}/binder/desktop-widget && \
-    npm install && \
-    npm run build && \
-    jupyter labextension install . --no-build && \
-    jupyter lab build --minimize=False
-
-# The entrypoint of the docker image
+#================= ENTRYPOINT =================================================#
 COPY binder/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

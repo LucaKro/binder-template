@@ -1,23 +1,16 @@
+# Python packages installed into the lab image (pip), after AICON itself.
+# AICON's own dependencies come from its pyproject.toml (see binder/Dockerfile).
+
+# Keep AICON's numpy pin when other packages are resolved
+numpy==1.26.4
+
+# Simulation for the drawer demo (AICON README: robosuite 1.4.1)
+robosuite==1.4.1
+mujoco==3.1.6
+
+# Imported by the AICON drawer tutorial but not listed in its pyproject.toml
+loguru==0.7.2
+lovely-tensors
+
+# Notebook UI
 ipywidgets
-sidecar
-matplotlib
-mujoco
-scipy
-SQLAlchemy #orm
-sqlacodegen==3.0.0 #orm
-tqdm==4.66.3
-psutil~=5.9.0
-typing_extensions>=4.10.0
-probabilistic_model>=7.1.0 # just until semantic world is integrated
-random_events>=4.1.18
-numpy
-pint>=0.21.1
-transforms3d
-python-box
-rustworkx
-pillow
-polytope # needed for random events
-semantic_digital_twin
-scikit-image
-owlready2
-SPARQLWrapper

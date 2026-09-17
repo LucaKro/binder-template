@@ -1,6 +1,6 @@
 # AICON: Active InterCONnect Lab
 
-[![Binder](https://binder.intel4coro.de/badge_logo.svg)](https://binder.intel4coro.de/v2/gh/LucaKro/binder-template/aicon_vrb?urlpath=lab/tree/notebooks/welcome.ipynb)
+[![Binder](https://binder.intel4coro.de/badge_logo.svg)](https://binder.intel4coro.de/v2/gh/LucaKro/binder-template/aicon_vrb?urlpath=lab/tree/welcome.ipynb)
 
 Try [AICON](https://github.com/tu-rbo/aicon) in your browser. AICON is a framework for robotic systems that estimate states and select actions by gradient descent through dynamically interconnected, differentiable components, solving sequential tasks without an explicit plan
 (Mengers & Brock, *No Plan but Everything Under Control*, ICRA 2025, [project website](https://www.tu.berlin/robotics/papers/noplan)).
@@ -13,7 +13,7 @@ It packages [AICON](https://github.com/tu-rbo/aicon) so it can be tried in the b
 
 | Interface | Link |
 |-----------|------|
-| JupyterLab (opens `notebooks/welcome.ipynb`) | https://binder.intel4coro.de/v2/gh/LucaKro/binder-template/aicon_vrb?urlpath=lab/tree/notebooks/welcome.ipynb |
+| JupyterLab (opens `welcome.ipynb`) | https://binder.intel4coro.de/v2/gh/LucaKro/binder-template/aicon_vrb?urlpath=lab/tree/welcome.ipynb |
 | Drawer demo with the desktop panel already open | https://binder.intel4coro.de/v2/gh/LucaKro/binder-template/aicon_vrb?urlpath=lab/tree/notebooks/drawer_demo.ipynb%3FautoOpenDesktop%3D1 |
 | VSCode | https://binder.intel4coro.de/v2/gh/LucaKro/binder-template/aicon_vrb?urlpath=vscode |
 
@@ -23,17 +23,18 @@ To freeze the lab to a specific version, replace `aicon_vrb` in the URL with a t
 
 ## What is inside
 
-- `notebooks/welcome.ipynb` – start here: overview and environment check
+- `welcome.ipynb` – start here: overview and environment check
 - `notebooks/blocksworld.ipynb` – blocksworld experiment with step-by-step plots
 - `notebooks/drawer_demo.ipynb` – simulated drawer opening on the remote desktop
-- `notebooks/lab_utils.py` – notebook helpers (the AICON code itself is used unchanged)
+- `notebooks/lab_utils.py` – notebook helpers
+- `aicon/` – link to the AICON source, a git checkout of https://github.com/tu-rbo/aicon (created at startup by `binder/entrypoint.sh`; not part of this repository)
 - `binder/Dockerfile` – how the image is built: base image, AICON and robosuite-task-zoo at pinned commits, CPU-only PyTorch, robosuite/MuJoCo, desktop panel extension
 - `binder/desktop-widget/` – JupyterLab extension that opens the remote desktop as a panel ("Open Desktop Panel" in the launcher and command palette; `?autoOpenDesktop=1` in the URL opens it at startup)
-- `binder/entrypoint.sh` – what runs before JupyterLab starts
+- `binder/entrypoint.sh` – what runs before JupyterLab starts (links `aicon/`)
 - `requirements.txt` – Python packages installed in addition to AICON's own dependencies
 - `binder/docker-compose.yml` – run the lab locally
 
-To update AICON, change `AICON_COMMIT` in `binder/Dockerfile`.
+To update AICON, change `AICON_COMMIT` in `binder/Dockerfile`. AICON is used unchanged except for one line: the Dockerfile removes the unused `SpaceMouse` import from `drawer_tutorial/run_demo.py`, because robosuite only provides it when the SpaceMouse driver (`hid`) is installed.
 
 ## Run locally
 
@@ -41,7 +42,7 @@ Requires Docker and Docker Compose on Linux.
 
 ```bash
 docker compose -f binder/docker-compose.yml up --build
-# open http://localhost:8888/lab/tree/notebooks/welcome.ipynb
+# open http://localhost:8888/lab/tree/welcome.ipynb
 docker compose -f binder/docker-compose.yml down
 ```
 

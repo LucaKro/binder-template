@@ -7,6 +7,8 @@ numpy==1.26.4
 # Simulation for the drawer demo (AICON README: robosuite 1.4.1)
 robosuite==1.4.1
 mujoco==3.1.6
+# robosuite.wrappers imports h5py at package level but robosuite does not list it
+h5py==3.12.1
 
 # Imported by the AICON drawer tutorial but not listed in its pyproject.toml
 loguru==0.7.2

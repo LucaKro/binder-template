@@ -37,6 +37,17 @@ if [[ -f "${workspace_file}" ]]; then
         echo "Workspace import failed; see /tmp/jupyter-workspace-import.log" >&2
 fi
 
+# --- Show the AICON source in the file browser and VSCode ---------------------
+# AICON is cloned outside the repository (binder/Dockerfile, PROJECT_DIR). Link it
+# as ./aicon, which is a git checkout with origin https://github.com/tu-rbo/aicon.
+# Done here instead of in the Dockerfile so it also exists when docker-compose
+# mounts the repository over /home/repo.
+aicon_link="${REPO_DIR}/aicon"
+if [[ -d "${PROJECT_DIR:-}" ]] && [[ -L "${aicon_link}" || ! -e "${aicon_link}" ]]; then
+    ln -sfn "${PROJECT_DIR}" "${aicon_link}" || \
+        echo "Could not link ${PROJECT_DIR} to ${aicon_link}" >&2
+fi
+
 # --- Lab-specific startup (background only) ----------------------------------
 # Example: start a ROS node visitors need, in the background:
 # ros2 launch my_pkg my_launch.py >/tmp/my_launch.log 2>&1 &

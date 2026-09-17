@@ -1,7 +1,7 @@
 """Helpers for the AICON lab notebooks.
 
-The AICON code itself is installed unchanged from https://github.com/tu-rbo/aicon
-(see binder/Dockerfile). This module only wraps it for use in notebooks:
+AICON is installed from https://github.com/tu-rbo/aicon (see binder/Dockerfile; only the
+unused SpaceMouse import in run_demo.py is removed). This module only wraps it for notebooks:
 
 - Blocksworld: run the synchronous experiment, record every state change, draw the towers.
 - Drawer demo: start/stop ``aicon.drawer_tutorial.run_demo`` as a background process

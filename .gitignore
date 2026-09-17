@@ -24,6 +24,9 @@ binder/desktop-widget/node_modules/
 binder/desktop-widget/lib/
 binder/desktop-widget/tsconfig.tsbuildinfo
 
+# Link to the AICON clone, created by binder/entrypoint.sh at startup
+/aicon
+
 # Editors / OS
 .idea/
 .vscode/

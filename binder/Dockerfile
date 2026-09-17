@@ -41,6 +41,13 @@ RUN mkdir -p ${PROJECT_DIR} && cd ${PROJECT_DIR} && \
     git fetch -q --depth=1 origin ${AICON_COMMIT} && \
     git checkout -q FETCH_HEAD
 
+# run_demo.py imports SpaceMouse, which robosuite only exports when the `hid`
+# module (3D mouse driver) is installed. It is unused, so drop it from the import.
+# grep fails the build if the line changes after an AICON_COMMIT update.
+RUN cd ${PROJECT_DIR}/src/aicon/drawer_tutorial && \
+    grep -q '^from robosuite.devices import Keyboard, SpaceMouse$' run_demo.py && \
+    sed -i 's/^from robosuite.devices import Keyboard, SpaceMouse$/from robosuite.devices import Keyboard/' run_demo.py
+
 # robosuite-task-zoo (provides the cabinet model used by the drawer demo)
 ARG TASK_ZOO_COMMIT=74eab7f88214c21ca1ae8617c2b2f8d19718a9ed
 RUN mkdir -p ${LIBS_DIR}/robosuite-task-zoo && cd ${LIBS_DIR}/robosuite-task-zoo && \

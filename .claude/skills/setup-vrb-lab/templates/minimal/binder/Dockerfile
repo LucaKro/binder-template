@@ -2,7 +2,7 @@
 #
 # Base image (ROS 2 + JupyterLab + VSCode + VNC desktop):
 #   https://github.com/IntEL4CoRo/jupyter-ros2
-# Other tags / ROS versions: see skills/setup-vrb-lab/reference/base-images.md
+# Other tags / ROS versions: see .claude/skills/setup-vrb-lab/reference/base-images.md
 #
 # Build-cache rule: steps that are slow and rarely change go at the TOP,
 # steps that use this repository's files go at the BOTTOM (after COPY).
@@ -39,7 +39,7 @@ ENV CODE_WORKING_DIRECTORY=${REPO_DIR}
 
 #================= PROJECT BUILD STEPS ========================================#
 # Steps that need the repository contents: pip install -e, colcon build, ...
-# See skills/setup-vrb-lab/templates/snippets/ for ready-made blocks.
+# See .claude/skills/setup-vrb-lab/templates/snippets/ for ready-made blocks.
 
 
 #================= ENTRYPOINT =================================================#
